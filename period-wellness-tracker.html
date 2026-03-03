@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cycle Wellness Tracker</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #ffeef8 0%, #fff4f9 50%, #f0f4ff 100%);
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .symptom-card:hover {
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const CycleWellnessTracker = () => {
+            const [lastPeriodDate, setLastPeriodDate] = useState('');
+            const [cycleLength, setCycleLength] = useState(28);
+            const [selectedSymptoms, setSelectedSymptoms] = useState([]);
+            const [currentPhase, setCurrentPhase] = useState(null);
+            const [dayInCycle, setDayInCycle] = useState(0);
+
+            const cyclePhases = {
+                menstrual: { name: 'Menstrual Phase', days: '1-5', color: 'bg-red-100', icon: '🌙' },
+                follicular: { name: 'Follicular Phase', days: '6-13', color: 'bg-green-100', icon: '🌱' },
+                ovulation: { name: 'Ovulation Phase', days: '14-16', color: 'bg-yellow-100', icon: '✨' },
+                luteal: { name: 'Luteal Phase', days: '17-28', color: 'bg-purple-100', icon: '🌸' }
+            };
+
+            const symptoms = {
+                menstrual: ['Cramps', 'Heavy Bleeding', 'Fatigue', 'Headache', 'Lower Back Pain', 'Mood Swings'],
+                follicular: ['Energy Boost', 'Clear Skin', 'Positive Mood', 'Light Bloating'],
+                ovulation: ['Increased Energy', 'Clear Discharge', 'Breast Tenderness', 'Mild Cramping'],
+                luteal: ['Bloating', 'Breast Tenderness', 'Fatigue', 'Mood Changes', 'Acne', 'Food Cravings', 'Anxiety']
+            };
+
+            const reliefTips = {
+                'Cramps': {
+                    icon: '💊',
+                    tips: ['Apply heating pad to lower abdomen', 'Try gentle yoga poses (child\'s pose, cat-cow)', 'Massage lower abdomen in circular motions', 'Stay hydrated with warm water'],
+                    supplements: ['Magnesium 400mg', 'Vitamin B1', 'Omega-3']
+                },
+                'Heavy Bleeding': {
+                    icon: '🩸',
+                    tips: ['Rest when possible', 'Use iron-rich foods to prevent anemia', 'Track blood loss', 'Consult doctor if soaking through pad/hour'],
+                    supplements: ['Iron', 'Vitamin C (aids iron absorption)', 'B-complex vitamins']
+                },
+                'Fatigue': {
+                    icon: '😴',
+                    tips: ['Prioritize 8-9 hours of sleep', 'Take short walks for energy', 'Avoid caffeine after 2pm', 'Power naps (20 min max)'],
+                    supplements: ['B12', 'Iron', 'CoQ10']
+                },
+                'Headache': {
+                    icon: '🤕',
+                    tips: ['Stay hydrated (8-10 glasses water)', 'Apply cold compress to forehead', 'Rest in dark, quiet room', 'Gentle neck stretches'],
+                    supplements: ['Magnesium', 'Riboflavin (B2)', 'CoQ10']
+                },
+                'Lower Back Pain': {
+                    icon: '🔥',
+                    tips: ['Heat therapy on lower back', 'Gentle stretching exercises', 'Maintain good posture', 'Try pelvic tilts'],
+                    supplements: ['Magnesium', 'Turmeric/Curcumin', 'Omega-3']
+                },
+                'Mood Swings': {
+                    icon: '😢',
+                    tips: ['Practice deep breathing (4-7-8 technique)', 'Journal your feelings', 'Gentle exercise', 'Limit social media'],
+                    supplements: ['Vitamin D', 'Omega-3', 'B-complex', 'Evening Primrose Oil']
+                },
+                'Bloating': {
+                    icon: '🎈',
+                    tips: ['Reduce salt intake', 'Drink herbal tea (peppermint, ginger)', 'Avoid carbonated drinks', 'Eat smaller, frequent meals'],
+                    supplements: ['Probiotics', 'Magnesium', 'Digestive enzymes']
+                },
+                'Breast Tenderness': {
+                    icon: '💗',
+                    tips: ['Wear supportive bra', 'Reduce caffeine intake', 'Apply warm compress', 'Avoid tight clothing'],
+                    supplements: ['Evening Primrose Oil', 'Vitamin E', 'Vitamin B6']
+                },
+                'Acne': {
+                    icon: '🔴',
+                    tips: ['Gentle skincare routine', 'Don\'t pick or squeeze', 'Use non-comedogenic products', 'Change pillowcases frequently'],
+                    supplements: ['Zinc', 'Omega-3', 'Vitamin A', 'Probiotics']
+                },
+                'Food Cravings': {
+                    icon: '🍫',
+                    tips: ['Choose dark chocolate (70%+)', 'Eat balanced meals with protein', 'Stay hydrated', 'Plan healthy snacks'],
+                    supplements: ['Chromium', 'Magnesium', 'B-complex']
+                },
+                'Anxiety': {
+                    icon: '😰',
+                    tips: ['Practice mindfulness meditation', 'Limit caffeine', 'Regular exercise', 'Deep breathing exercises'],
+                    supplements: ['Magnesium', 'L-theanine', 'Ashwagandha', 'B-complex']
+                },
+                'Energy Boost': {
+                    icon: '⚡',
+                    tips: ['Great time for high-intensity workouts', 'Take on challenging projects', 'Social activities', 'Try new activities'],
+                    supplements: ['B-complex for sustained energy']
+                },
+                'Clear Skin': {
+                    icon: '✨',
+                    tips: ['Maintain consistent skincare', 'Stay hydrated', 'Use lighter moisturizers'],
+                    supplements: ['Vitamin C', 'Collagen', 'Biotin']
+                },
+                'Positive Mood': {
+                    icon: '😊',
+                    tips: ['Schedule important meetings', 'Social gatherings', 'Creative projects', 'Make decisions'],
+                    supplements: ['Continue regular vitamins']
+                },
+                'Increased Energy': {
+                    icon: '🚀',
+                    tips: ['Peak performance time', 'Intensive workouts', 'Important presentations', 'Social events'],
+                    supplements: ['Electrolytes', 'B-complex']
+                },
+                'Clear Discharge': {
+                    icon: '💧',
+                    tips: ['Normal sign of ovulation', 'Peak fertility time', 'Stay hydrated'],
+                    supplements: ['Prenatal vitamins if TTC']
+                },
+                'Mild Cramping': {
+                    icon: '⚡',
+                    tips: ['Light heating pad', 'Gentle walks', 'Stay active', 'Normal ovulation sign'],
+                    supplements: ['Magnesium']
+                },
+                'Light Bloating': {
+                    icon: '🌊',
+                    tips: ['Reduce sodium', 'Stay hydrated', 'Herbal teas'],
+                    supplements: ['Probiotics']
+                },
+                'Mood Changes': {
+                    icon: '🎭',
+                    tips: ['Practice self-care', 'Gentle exercise', 'Adequate sleep', 'Communicate needs'],
+                    supplements: ['Magnesium', 'Vitamin B6', 'Omega-3']
+                }
+            };
+
+            const nutritionByPhase = {
+                menstrual: {
+                    focus: 'Replenish iron and energy',
+                    foods: [
+                        { name: 'Leafy Greens', reason: 'High in iron and magnesium', emoji: '🥬' },
+                        { name: 'Red Meat/Lentils', reason: 'Replenish iron from blood loss', emoji: '🥩' },
+                        { name: 'Dark Chocolate', reason: 'Magnesium for cramps, mood boost', emoji: '🍫' },
+                        { name: 'Salmon/Sardines', reason: 'Omega-3 reduces inflammation', emoji: '🐟' },
+                        { name: 'Turmeric/Ginger', reason: 'Natural anti-inflammatory', emoji: '🫚' },
+                        { name: 'Bananas', reason: 'Potassium helps with bloating', emoji: '🍌' },
+                        { name: 'Quinoa', reason: 'Complete protein, iron, magnesium', emoji: '🌾' }
+                    ],
+                    avoid: ['Excess caffeine', 'Processed foods', 'High sodium', 'Alcohol', 'Refined sugar'],
+                    hydration: '8-10 glasses of water + herbal teas (ginger, chamomile)'
+                },
+                follicular: {
+                    focus: 'Build energy and support egg development',
+                    foods: [
+                        { name: 'Eggs', reason: 'Support egg quality, protein', emoji: '🥚' },
+                        { name: 'Fermented Foods', reason: 'Balance gut health, estrogen', emoji: '🥒' },
+                        { name: 'Lean Proteins', reason: 'Build muscle, sustain energy', emoji: '🍗' },
+                        { name: 'Broccoli/Cabbage', reason: 'Help metabolize estrogen', emoji: '🥦' },
+                        { name: 'Seeds (Flax, Pumpkin)', reason: 'Lignans support hormone balance', emoji: '🌰' },
+                        { name: 'Berries', reason: 'Antioxidants, vitamin C', emoji: '🫐' },
+                        { name: 'Avocado', reason: 'Healthy fats for hormones', emoji: '🥑' }
+                    ],
+                    avoid: ['Heavy, processed foods', 'Excess dairy'],
+                    hydration: '8-10 glasses of water, green tea'
+                },
+                ovulation: {
+                    focus: 'Support ovulation and inflammation reduction',
+                    foods: [
+                        { name: 'Whole Grains', reason: 'Fiber helps process estrogen', emoji: '🌾' },
+                        { name: 'Colorful Vegetables', reason: 'Antioxidants, anti-inflammatory', emoji: '🥕' },
+                        { name: 'Almonds/Walnuts', reason: 'Vitamin E, healthy fats', emoji: '🌰' },
+                        { name: 'Spinach', reason: 'Folate for egg quality', emoji: '🥬' },
+                        { name: 'Bell Peppers', reason: 'Vitamin C, antioxidants', emoji: '🫑' },
+                        { name: 'Wild Rice', reason: 'Complex carbs, B vitamins', emoji: '🍚' },
+                        { name: 'Asparagus', reason: 'Folate, glutathione', emoji: '🥒' }
+                    ],
+                    avoid: ['Inflammatory foods', 'Excess sugar'],
+                    hydration: '10+ glasses of water'
+                },
+                luteal: {
+                    focus: 'Support progesterone, reduce PMS symptoms',
+                    foods: [
+                        { name: 'Sweet Potatoes', reason: 'Complex carbs stabilize blood sugar', emoji: '🍠' },
+                        { name: 'Chickpeas/Beans', reason: 'Fiber, B6 for mood', emoji: '🫘' },
+                        { name: 'Pumpkin Seeds', reason: 'Zinc supports progesterone', emoji: '🎃' },
+                        { name: 'Turkey/Chicken', reason: 'Tryptophan for serotonin', emoji: '🦃' },
+                        { name: 'Sesame Seeds', reason: 'Lignans, vitamin E', emoji: '🌰' },
+                        { name: 'Dark Leafy Greens', reason: 'Calcium, magnesium for PMS', emoji: '🥬' },
+                        { name: 'Sunflower Seeds', reason: 'Selenium, vitamin E', emoji: '🌻' }
+                    ],
+                    avoid: ['Excess salt (bloating)', 'Caffeine (anxiety)', 'Alcohol', 'Refined carbs'],
+                    hydration: '8-10 glasses, reduce bloating with herbal teas'
+                }
+            };
+
+            useEffect(() => {
+                if (lastPeriodDate) {
+                    calculatePhase();
+                }
+            }, [lastPeriodDate, cycleLength]);
+
+            const calculatePhase = () => {
+                const lastPeriod = new Date(lastPeriodDate);
+                const today = new Date();
+                const diffTime = Math.abs(today - lastPeriod);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const dayInCurrentCycle = diffDays % cycleLength || cycleLength;
+                
+                setDayInCycle(dayInCurrentCycle);
+
+                if (dayInCurrentCycle >= 1 && dayInCurrentCycle <= 5) {
+                    setCurrentPhase('menstrual');
+                } else if (dayInCurrentCycle >= 6 && dayInCurrentCycle <= 13) {
+                    setCurrentPhase('follicular');
+                } else if (dayInCurrentCycle >= 14 && dayInCurrentCycle <= 16) {
+                    setCurrentPhase('ovulation');
+                } else {
+                    setCurrentPhase('luteal');
+                }
+            };
+
+            const toggleSymptom = (symptom) => {
+                setSelectedSymptoms(prev => 
+                    prev.includes(symptom) 
+                        ? prev.filter(s => s !== symptom)
+                        : [...prev, symptom]
+                );
+            };
+
+            const getCurrentNutrition = () => {
+                if (!currentPhase) return null;
+                return nutritionByPhase[currentPhase];
+            };
+
+            return (
+                <div className="min-h-screen p-4 md:p-8">
+                    <div className="max-w-6xl mx-auto">
+                        {/* Header */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 mb-2">
+                                Cycle Wellness Tracker
+                            </h1>
+                            <p className="text-gray-600">Personalized relief & nutrition for every phase</p>
+                        </div>
+
+                        {/* Cycle Setup Card */}
+                        <div className="glass rounded-2xl p-6 mb-6 shadow-lg">
+                            <h2 className="text-2xl font-semibold mb-4 text-gray-800">📅 Track Your Cycle</h2>
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        First Day of Last Period
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={lastPeriodDate}
+                                        onChange={(e) => setLastPeriodDate(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-pink-400 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Average Cycle Length (days)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={cycleLength}
+                                        onChange={(e) => setCycleLength(parseInt(e.target.value))}
+                                        min="21"
+                                        max="35"
+                                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-pink-400 focus:border-transparent"
+                                    />
+                                </div>
+                            </div>
+
+                            {currentPhase && (
+                                <div className={`mt-4 p-4 ${cyclePhases[currentPhase].color} rounded-xl`}>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <span className="text-2xl mr-2">{cyclePhases[currentPhase].icon}</span>
+                                            <span className="text-lg font-semibold">{cyclePhases[currentPhase].name}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-2xl font-bold text-gray-800">Day {dayInCycle}</div>
+                                            <div className="text-sm text-gray-600">of your cycle</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {currentPhase && (
+                            <>
+                                {/* Symptom Selection */}
+                                <div className="glass rounded-2xl p-6 mb-6 shadow-lg">
+                                    <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                                        🩺 What symptoms are you experiencing?
+                                    </h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        {symptoms[currentPhase].map(symptom => (
+                                            <button
+                                                key={symptom}
+                                                onClick={() => toggleSymptom(symptom)}
+                                                className={`p-3 rounded-lg border-2 transition-all ${
+                                                    selectedSymptoms.includes(symptom)
+                                                        ? 'border-pink-500 bg-pink-50 shadow-md'
+                                                        : 'border-gray-200 bg-white hover:border-pink-300'
+                                                }`}
+                                            >
+                                                <span className="font-medium text-gray-800">{symptom}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Relief Tips */}
+                                {selectedSymptoms.length > 0 && (
+                                    <div className="glass rounded-2xl p-6 mb-6 shadow-lg">
+                                        <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                                            💡 Relief Tips for Your Symptoms
+                                        </h2>
+                                        <div className="space-y-4">
+                                            {selectedSymptoms.map(symptom => (
+                                                <div key={symptom} className="symptom-card bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+                                                    <div className="flex items-start gap-3">
+                                                        <span className="text-3xl">{reliefTips[symptom].icon}</span>
+                                                        <div className="flex-1">
+                                                            <h3 className="text-lg font-semibold text-gray-800 mb-2">{symptom}</h3>
+                                                            <div className="mb-3">
+                                                                <p className="text-sm font-medium text-gray-600 mb-1">What to do:</p>
+                                                                <ul className="list-disc list-inside space-y-1">
+                                                                    {reliefTips[symptom].tips.map((tip, idx) => (
+                                                                        <li key={idx} className="text-sm text-gray-700">{tip}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                            {reliefTips[symptom].supplements && (
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-gray-600 mb-1">Helpful supplements:</p>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {reliefTips[symptom].supplements.map((supp, idx) => (
+                                                                            <span key={idx} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                                                {supp}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Nutrition Guide */}
+                                <div className="glass rounded-2xl p-6 shadow-lg">
+                                    <h2 className="text-2xl font-semibold mb-2 text-gray-800">
+                                        🥗 Nutrition for {cyclePhases[currentPhase].name}
+                                    </h2>
+                                    <p className="text-gray-600 mb-4 italic">{getCurrentNutrition().focus}</p>
+                                    
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-3">✨ Foods to Eat</h3>
+                                        <div className="grid md:grid-cols-2 gap-3">
+                                            {getCurrentNutrition().foods.map((food, idx) => (
+                                                <div key={idx} className="bg-white rounded-lg p-4 border border-gray-100">
+                                                    <div className="flex items-start gap-3">
+                                                        <span className="text-2xl">{food.emoji}</span>
+                                                        <div>
+                                                            <p className="font-semibold text-gray-800">{food.name}</p>
+                                                            <p className="text-sm text-gray-600">{food.reason}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-3">🚫 Foods to Limit</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {getCurrentNutrition().avoid.map((food, idx) => (
+                                                <span key={idx} className="px-4 py-2 bg-red-50 text-red-700 rounded-lg text-sm border border-red-100">
+                                                    {food}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">💧 Hydration</h3>
+                                        <p className="text-gray-700">{getCurrentNutrition().hydration}</p>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {!currentPhase && (
+                            <div className="glass rounded-2xl p-12 text-center shadow-lg">
+                                <div className="text-6xl mb-4">🌸</div>
+                                <h3 className="text-2xl font-semibold text-gray-800 mb-2">
+                                    Get Started
+                                </h3>
+                                <p className="text-gray-600">
+                                    Enter your cycle information above to receive personalized wellness guidance
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Footer Note */}
+                        <div className="mt-8 text-center text-sm text-gray-500">
+                            <p>⚠️ This app provides general wellness tips. Always consult with your healthcare provider for medical advice.</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<CycleWellnessTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
